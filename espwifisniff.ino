@@ -64,7 +64,7 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
         buf += 6;
         memcpy(addr2, buf, 6);
         buf += 6;
-        memcpy(addr3, buf + 12, 6);
+        memcpy(addr3, buf, 6);
         buf += 6;
         if (add_mac(addr1)) {
             print_mac(addr1);
