@@ -28,7 +28,7 @@ static bool add_mac(const uint8_t * mac)
     }
 
     // not found, add it if there's still room
-    if (unique_num < (MAX_MAC - 1)) {
+    if (unique_num < MAX_MAC) {
         memcpy(&unique_mac[unique_num], mac, 6);
         unique_num++;
         return true;
