@@ -53,12 +53,18 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
     uint8_t addr1[6];
     uint8_t addr2[6];
     uint8_t addr3[6];
+    char text[32];
 
-    if (len == 128) {
+    if (len >= 34) {
         // skip header
         buf += 12;
-        // skip FC and DUR
-        buf += 4;
+
+        // read FC and DUR
+        uint16_t fc = buf[0] + buf[1] << 8;
+        buf += 2;
+        uint16_t dur = buf[0] + buf[1] << 8;
+        buf += 2;
+
         // get address1, address2, address3
         memcpy(addr1, buf, 6);
         buf += 6;
@@ -66,8 +72,14 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
         buf += 6;
         memcpy(addr3, buf, 6);
         buf += 6;
-        if (add_mac(addr2)) {
-            print_mac(addr2);
+
+        // check for packet with FromDS=0,ToDS=1, packets from station to AP
+        if (((fc >> 8) & 3) == 1) {
+            if (add_mac(addr2)) {
+                sprintf(text, "%04X: ", fc);
+                Serial.print(text);
+                print_mac(addr2);
+            }
         }
     }
 }
