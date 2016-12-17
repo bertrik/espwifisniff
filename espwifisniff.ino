@@ -73,8 +73,8 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
         memcpy(addr3, buf, 6);
         buf += 6;
 
-        // check for packet with FromDS=0,ToDS=1, packets from station to AP
-        if (((fc >> 8) & 3) == 1) {
+        // check for packet with FromDS=0, packets from station
+        if (((fc >> 9) & 1) == 0) {
             if (add_mac(addr2)) {
                 sprintf(text, "%04X: ", fc);
                 Serial.print(text);
