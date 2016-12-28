@@ -10,19 +10,35 @@ extern "C" {
 #include <user_interface.h>
 }
 // maximum number of unique mac addresses to remember
-#define MAX_MAC 64
+#define MAX_MAC 200
 
 static int unique_num = 0;
-static uint8_t unique_mac[MAX_MAC][6];
+
+typedef struct {
+    uint8_t mac[6];
+    unsigned long last_seen;
+} mac_t;
+
+static mac_t unique_mac[MAX_MAC];
+
+// prints a mac address
+static void print_mac(const uint8_t * mac)
+{
+    char text[32];
+    sprintf(text, "%02X:%02X:%02X:%02X:%02X:%02X",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial.print(text);
+}
 
 // returns true if a new mac was added to the table of unique mac addresses
-static bool add_mac(const uint8_t * mac)
+static bool add_mac(unsigned long now, const uint8_t * mac)
 {
     // try to find it
     int i;
     for (i = 0; i < unique_num; i++) {
-        if (memcmp(mac, unique_mac[i], 6) == 0) {
-            // not unique
+        if (memcmp(mac, unique_mac[i].mac, 6) == 0) {
+            // found it, update timestamp
+            unique_mac[i].last_seen = now;
             return false;
         }
     }
@@ -30,6 +46,7 @@ static bool add_mac(const uint8_t * mac)
     // not found, add it if there's still room
     if (unique_num < MAX_MAC) {
         memcpy(&unique_mac[unique_num], mac, 6);
+        unique_mac[unique_num].last_seen = now;
         unique_num++;
         return true;
     } else {
@@ -38,13 +55,24 @@ static bool add_mac(const uint8_t * mac)
     }
 }
 
-// prints a mac address
-static void print_mac(const uint8_t * mac)
+// expires old mac entries
+static void expire_mac(unsigned long now, unsigned long expiry)
 {
     char text[32];
-    sprintf(text, "%02X:%02X:%02X:%02X:%02X:%02X",
-            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    Serial.println(text);
+    int i;
+    for (i = 0; i < unique_num; i++) {
+        if ((now - unique_mac[i].last_seen) > expiry) {
+            // expired, overwrite it with the last one
+            if (--unique_num > i) {
+                sprintf(text, "%10d: ", now);
+                Serial.print(text);
+                print_mac(unique_mac[i].mac);
+                sprintf(text, " expired: %d\n", unique_num);
+                Serial.print(text);
+                memcpy(&unique_mac[i], &unique_mac[unique_num], sizeof(mac_t));
+            }
+        }
+    }
 }
 
 // callback for promiscuous mode
@@ -75,10 +103,14 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
 
         // check for packet with FromDS=0, packets from station
         if (((fc >> 9) & 1) == 0) {
-            if (add_mac(addr2)) {
-                sprintf(text, "%04X: ", fc);
+            unsigned long now = millis();
+            expire_mac(now, 60000);
+            if (add_mac(now, addr2)) {
+                sprintf(text, "%10d: ", now);
                 Serial.print(text);
                 print_mac(addr2);
+                sprintf(text, " added: %d\n", unique_num);
+                Serial.print(text);
             }
         }
     }
