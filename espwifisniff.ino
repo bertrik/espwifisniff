@@ -64,7 +64,7 @@ static void expire_mac(unsigned long now, unsigned long expiry)
         if ((now - unique_mac[i].last_seen) > expiry) {
             // expired, overwrite it with the last one
             if (--unique_num > i) {
-                sprintf(text, "%10d: ", now);
+                sprintf(text, "%10ld: ", now);
                 Serial.print(text);
                 print_mac(unique_mac[i].mac);
                 sprintf(text, " expired: %d\n", unique_num);
@@ -88,10 +88,11 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
         buf += 12;
 
         // read FC and DUR
-        uint16_t fc = buf[0] + buf[1] << 8;
+        uint16_t fc = (buf[1] << 8) + buf[0];
         buf += 2;
-        uint16_t dur = buf[0] + buf[1] << 8;
+        uint16_t dur = (buf[1] << 8) + buf[0];
         buf += 2;
+        (void)dur;
 
         // get address1, address2, address3
         memcpy(addr1, buf, 6);
@@ -106,7 +107,7 @@ static void promisc_cb(uint8_t * buf, uint16_t len)
             unsigned long now = millis();
             expire_mac(now, 60000);
             if (add_mac(now, addr2)) {
-                sprintf(text, "%10d: ", now);
+                sprintf(text, "%10ld: ", now);
                 Serial.print(text);
                 print_mac(addr2);
                 sprintf(text, " added: %d\n", unique_num);
