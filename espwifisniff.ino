@@ -135,7 +135,7 @@ void setup(void)
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
-    enable_promisc(6);
+    enable_promisc(1);
 }
 
 void loop(void)
